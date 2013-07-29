@@ -1,4 +1,5 @@
 module ActiveMDB
+  include ActiveSupport::Inflector
   # Hi, I am an imitation of ActiveRecord.
   class Base
     
@@ -21,8 +22,8 @@ module ActiveMDB
       
       # set the name of the table in the MDB file
       def table_name
-        table_name = Inflector.underscore(Inflector.demodulize(self.to_s))
-        table_name = Inflector.pluralize(table_name) if pluralize_table_names
+        table_name = ActiveSupport::Inflector.underscore(ActiveSupport::Inflector.demodulize(self.to_s))
+        table_name = ActiveSupport::Inflector.pluralize(table_name) if pluralize_table_names
         table_name
       end
       

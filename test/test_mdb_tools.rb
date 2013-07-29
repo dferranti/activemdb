@@ -23,9 +23,9 @@ class MDBToolsTest < Test::Unit::TestCase
   
   def test_check_file
     assert_nothing_raised { check_file TEST_DB }
-    assert_raise(ArgumentError) { check_file 'completely_bogus_filename' }
+    assert_raise(MDBToolsError) { check_file 'completely_bogus_filename' }
     # the README file is obviously not an Access database
-    assert_raise(ArgumentError) { check_file README}
+    assert_raise(MDBToolsError) { check_file README}
   end
   
   def test_valid_file
@@ -40,14 +40,14 @@ class MDBToolsTest < Test::Unit::TestCase
   
   def test_check_table
     assert_nothing_raised { check_table TEST_DB, 'Employee'}
-    assert_raises(ArgumentError) { check_table TEST_DB, 'foobarbaz' }
+    assert_raises(MDBToolsError) { check_table TEST_DB, 'foobarbaz' }
   end
   
   def test_mdb_tables
     tables1 = mdb_tables(TEST_DB, :exclude => EXCLUDE)
     assert_equal TEST_TABLES, tables1
 
-    assert_raises( ArgumentError) { mdb_tables(TEST_DB, :include => [], :exclude => []) }
+    assert_raises( MDBToolsError) { mdb_tables(TEST_DB, :include => [], :exclude => []) }
     tables4 = mdb_tables(TEST_DB, :exclude => 'Room')
     assert_equal %w{Computer Employee Inventory}, tables4
   end

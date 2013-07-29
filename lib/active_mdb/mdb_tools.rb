@@ -1,40 +1,44 @@
 module MDBTools
-  
+
+  include ActiveSupport::Inflector
   extend self
-  
+
   DELIMITER = '::'
   LINEBREAK = "\n"
   SANITIZER = /^\w\.\_/ # dumb filter for SQL arguments
   BACKENDS = %w{ access mysql oracle postgres sybase }
-  
+
+
+  class MDBToolsError < StandardError ; end
+
   # test for existence and usability of file
   def check_file(mdb_file)
-    raise ArgumentError, "File not found: #{mdb_file}" unless File.exist?(mdb_file)
+    raise MDBToolsError, "File not found: #{mdb_file}" unless File.exist?(mdb_file)
     @mdb_version = `mdb-ver #{mdb_file} 2>&1`.chomp
     if $? != 0
-      raise ArgumentError, "mdbtools cannot access #{mdb_file}"
+      raise MDBToolsError, "mdbtools cannot access #{mdb_file}"
     end
     mdb_file
   end
-  
+
   # runs mdb_version.  A blank version indicates an unusable file
   def valid_file?(file)
     !mdb_version(file).blank?
   end
-  
+
   def mdb_version(file)
     `mdb-ver #{file} 2> /dev/null`.chomp
   end
-  
-  # raises an ArgumentError unless the mdb file contains a table with the specified name.
+
+  # raises an MDBToolsError unless the mdb file contains a table with the specified name.
   # returns the table name, otherwise.
   def check_table(mdb_file, table_name)
     unless mdb_tables(mdb_file).include?(table_name)
-      raise ArgumentError, "mdbtools does not think a table named \"#{table_name}\" exists"
+      raise MDBToolsError, "mdbtools does not think a table named \"#{table_name}\" exists"
     end
     table_name
   end
-  
+
   # uses mdb-tables tool to return an array of table names.
   # You can filter the tables by passing an array of strings as
   # either the :exclude or :include key to the options hash.
@@ -47,9 +51,9 @@ module MDBTools
   def mdb_tables(mdb_file, options = {})
     included, excluded = options[:include], options[:exclude]
     return `mdb-tables -1 #{mdb_file}`.split(LINEBREAK) if not (included || excluded)
-    raise ArgumentError if (options[:include] && options [:exclude])
+    raise MDBToolsError if (options[:include] && options [:exclude])
     if options[:exclude]
-      regex = Regexp.new options[:exclude].to_a.join('|') 
+      regex = Regexp.new options[:exclude].to_a.join('|')
       tables = `mdb-tables -1 #{mdb_file}`.split(LINEBREAK).delete_if { |name| name =~ regex }
     end
     if options[:include]
@@ -58,12 +62,12 @@ module MDBTools
     end
     tables
   end
-  
+
   # takes an array of field names
   # and some conditions to append in a WHERE clause
   def sql_select_where(mdb_file, table_name, attributes = nil, conditions=nil)
     if attributes.respond_to?(:join)
-      attributes = attributes.collect {|a| "\"#{a}\"" }.join(' ') 
+      attributes = attributes.collect {|a| "\"#{a}\"" }.join(' ')
     elsif attributes.kind_of?(String)
       attributes = "\"#{attributes}\""
     else
@@ -73,7 +77,7 @@ module MDBTools
     sql = "select #{attributes} from #{table_name} #{where}"
     mdb_sql(mdb_file, sql)
   end
-  
+
   # forks an IO.popen running mdb-sql and discarding STDERR to /dev/null.
   # The sql argument should be a single statement, 'cause I don't know
   # what will happen otherwise.  mdb-sql uses "\ngo" as the command terminator.
@@ -103,7 +107,7 @@ module MDBTools
     fields = `echo -n 'select * from #{table} where 1 = 2' | mdb-sql -Fp -d '#{DELIMITER}' #{mdb_file}`.chomp.sub(/^\n+/, '')
     fields.split(DELIMITER)
   end
-  
+
 
   # takes a hash where keys are column names, values are search values
   # and returns a string that you can use in a WHERE clause
@@ -122,16 +126,16 @@ module MDBTools
       if block_given?
         yield column_name, value
       else
-        "#{column_name} like '%#{value}%'"        
+        "#{column_name} like '%#{value}%'"
       end
     end.join(' AND ')
   end
-  
+
   # really dumb way to get a count.  Does a SELECT and call size on the results
   def faked_count(*args)
     sql_select_where(*args).size
   end
-  
+
   # convenience method, not really used with ActiveMDB.  
   # Valid options are :format, :headers, and :sanitize, 
   # which correspond rather directly to the underlying mdb-export arguments.
@@ -141,7 +145,7 @@ module MDBTools
                   :headers => false,
                   :sanitize => true  }
     options = defaults.merge options
-    
+
     args = []
     if options[:delimiter]
       args << "-d #{options[:delimiter].dump}"
@@ -150,20 +154,20 @@ module MDBTools
     elsif options[:format] == 'csv'
       args << "-d ',' "
     else
-      raise ArgumentError, "Unknown format:  #{options[:format]}"
+      raise MDBToolsError, "Unknown format:  #{options[:format]}"
     end
-    
+
     args << "-H " unless options[:headers] == true
     args << "-S" unless options[:sanitize] == false
     `mdb-export #{args} #{mdb_file} #{table_name.to_s.dump}`
   end
-  
+
   # wrapper for DESCRIBE TABLE using mdb-sql
   def describe_table(mdb_file, table_name)
     command = "describe table \"#{table_name}\""
     mdb_sql(mdb_file,command)
   end
-  
+
   # wrapper for mdb-schema, returns SQL statements
   def mdb_schema(mdb_file, table_name)
     schema = `mdb-schema -T #{table_name.dump} #{mdb_file}`
@@ -173,12 +177,12 @@ module MDBTools
   def table_to_csv(mdb_file, table_name)
     mdb_export(mdb_file, table_name, :format => 'csv', :headers => true)
   end
-  
+
   def delimited_to_arrays(text)
     text.gsub!(/\r\n/,' ')
     text.split(LINEBREAK).collect { |row| row.split(DELIMITER)}
   end
-  
+
   def arrays_to_hashes(headers, arrays)
     arrays.collect do |record|
       record_hash = Hash.new
@@ -190,23 +194,23 @@ module MDBTools
       record_hash
     end
   end
-  
+
 
   # helper to turn table names into standard format method names.
   # Inside, it's just ActionView::Inflector.underscore
   def methodize(table_name)
-    Inflector.underscore table_name
+    ActiveSupport::Inflector.underscore table_name
   end
-  
+
   def backends
     BACKENDS
   end
-  
+
   # poor, weakly sanitizing gsub!.
   def sanitize!(string)
     string.gsub!(SANITIZER, '')
   end
-  
+
   # mdb-tools recognizes 1 and 0 as the boolean values.
   # Make it so.
   def mdb_truth(value)
@@ -225,5 +229,5 @@ module MDBTools
       1
     end
   end
-  
+
 end
