@@ -99,7 +99,7 @@ module MDBTools
           full_line.last << row.first
           row.delete(row.first)
         end
-        full_line << row
+        full_line << row.map{|col| col.chomp}
         full_line.flatten!
 
         #fixing '\r\n' symbols in memo fields type. In old implementation this breaks the result by splitting it to a couple dataset rows
