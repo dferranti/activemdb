@@ -90,13 +90,26 @@ module MDBTools
       pipe.close_write
       pipe.readline
       fields = pipe.readline.chomp.split(DELIMITER)
+      full_line = []
       pipe.each do |row|
         hash = {}
-        row = row.chomp.split(DELIMITER)
+        row = row.split(DELIMITER)
+        if !full_line.empty? && full_line.size < fields.size
+          full_line.last << " "
+          full_line.last << row.first
+          row.delete(row.first)
+        end
+        full_line << row
+        full_line.flatten!
+
+        #fixing '\r\n' symbols in memo fields type. In old implementation this breaks the result by splitting it to a couple dataset rows
+        next unless full_line.size == fields.size
+
         fields.each_index do |i|
-          hash[fields[i]] = row[i]
+          hash[fields[i]] = full_line[i]
         end
         array << hash
+        full_line = []
       end
     end
     array
