@@ -1,3 +1,9 @@
+== 0.2.3 / 2013-04-18
+
+Fixed for use with rails 3.2.x
+Fixed support of reading MEMO data type in mdb_sql method
+Commented out all not used code in /lib (not removed to make possible back something in future)
+
 == 0.2.2 / 2007-04-18
 
 Reworked conditions_hash call to handle either field or method names.
