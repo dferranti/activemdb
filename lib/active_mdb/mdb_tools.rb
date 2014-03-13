@@ -27,7 +27,7 @@ module MDBTools
   end
 
   def mdb_version(file)
-    `mdb-ver #{file} 2> /dev/null`.chomp
+    `bin/mdbtools/mdb-ver #{file} 2> /dev/null`.chomp
   end
 
   # raises an MDBToolsError unless the mdb file contains a table with the specified name.
@@ -50,15 +50,15 @@ module MDBTools
   # ex. mdb_tables('thing.mdb', :include => ['tbl'])
   def mdb_tables(mdb_file, options = {})
     included, excluded = options[:include], options[:exclude]
-    return `mdb-tables -1 #{mdb_file}`.split(LINEBREAK) if not (included || excluded)
+    return `bin/mdbtools/mdb-tables -1 #{mdb_file}`.split(LINEBREAK) if not (included || excluded)
     raise MDBToolsError if (options[:include] && options [:exclude])
     if options[:exclude]
       regex = Regexp.new options[:exclude].to_a.join('|')
-      tables = `mdb-tables -1 #{mdb_file}`.split(LINEBREAK).delete_if { |name| name =~ regex }
+      tables = `bin/mdbtools/mdb-tables -1 #{mdb_file}`.split(LINEBREAK).delete_if { |name| name =~ regex }
     end
     if options[:include]
       regex = Regexp.new options[:include].to_a.join('|')
-      tables = `mdb-tables -1 #{mdb_file}`.split(LINEBREAK).select { |name| name =~ regex }
+      tables = `bin/mdbtools/mdb-tables -1 #{mdb_file}`.split(LINEBREAK).select { |name| name =~ regex }
     end
     tables
   end
@@ -117,7 +117,7 @@ module MDBTools
 
   # uses mdb-sql to retrieve an array of the table's field names
   def field_names_for(mdb_file, table)
-    fields = `echo -n 'select * from #{table} where 1 = 2' | mdb-sql -Fp -d '#{DELIMITER}' #{mdb_file}`.chomp.sub(/^\n+/, '')
+    fields = `echo -n 'select * from #{table} where 1 = 2' | bin/mdbtools/mdb-sql -Fp -d '#{DELIMITER}' #{mdb_file}`.chomp.sub(/^\n+/, '')
     fields.split(DELIMITER)
   end
 
@@ -172,7 +172,7 @@ module MDBTools
 
     args << "-H " unless options[:headers] == true
     args << "-S" unless options[:sanitize] == false
-    `mdb-export #{args} #{mdb_file} #{table_name.to_s.dump}`
+    `bin/mdbtools/mdb-export #{args} #{mdb_file} #{table_name.to_s.dump}`
   end
 
   # wrapper for DESCRIBE TABLE using mdb-sql
@@ -183,7 +183,7 @@ module MDBTools
 
   # wrapper for mdb-schema, returns SQL statements
   def mdb_schema(mdb_file, table_name)
-    schema = `mdb-schema -T #{table_name.dump} #{mdb_file}`
+    schema = `bin/mdbtools/mdb-schema -T #{table_name.dump} #{mdb_file}`
   end
 
   # convenience method for mdb_export to output CSV with headers.
