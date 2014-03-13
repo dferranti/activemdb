@@ -83,7 +83,7 @@ module MDBTools
   # what will happen otherwise.  mdb-sql uses "\ngo" as the command terminator.
   def mdb_sql(mdb_file,sql)
     # libMDB barks on stderr quite frequently, so discard stderr entirely
-    command = "mdb-sql -Fp -d '#{DELIMITER}' #{mdb_file} 2> /dev/null \n"
+    command = "bin/mdbsql/mdb-sql -Fp -d '#{DELIMITER}' #{mdb_file} 2> /dev/null \n"
     array = []
     IO.popen(command, 'r+') do |pipe|
       pipe << "#{sql}\ngo\n"
